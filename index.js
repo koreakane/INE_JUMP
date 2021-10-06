@@ -6,12 +6,14 @@ let ctx = canvas.getContext("2d");
 const W_WIDTH = window.innerWidth;
 const W_HEIGHT = window.innerHeight;
 
+const Land_Y = (W_HEIGHT * 2) / 3;
+
 canvas.width = W_WIDTH;
-canvas.height = W_HEIGHT - 100;
+canvas.height = W_HEIGHT;
 
 //game setting
 
-const gravity = 0.4;
+const gravity = 0.32;
 
 let gravitySpeed = 0;
 let isJumping = false;
@@ -27,10 +29,10 @@ let animation;
 //npc setting
 
 let INE = {
-  x: 50,
-  y: 300,
-  width: 30,
-  height: 40,
+  x: 0,
+  y: Land_Y - 120,
+  width: 80,
+  height: 120,
   draw() {
     ctx.fillStyle = "gray";
     ctx.fillRect(this.x, this.y, this.width, this.height);
@@ -38,12 +40,13 @@ let INE = {
 };
 
 let pigeonList = [];
+let pigeonSpeed = 4;
 
 class Pigeon {
   constructor() {
     this.x = W_WIDTH + 40;
     this.y = 300;
-    this.width = 20;
+    this.width = 70;
     this.height = 40;
   }
   draw() {
@@ -56,12 +59,25 @@ class Pigeon {
 
 let land = {
   x: 0,
-  y: 340,
+  y: Land_Y,
   width: W_WIDTH,
-  height: W_HEIGHT - 340,
+  height: W_HEIGHT - Land_Y,
   draw() {
     ctx.fillStyle = "chocolate";
     ctx.fillRect(this.x, this.y, this.width, this.height);
+  },
+};
+
+//game UI setting
+
+let scoreText = {
+  x: W_WIDTH / 2 - 40,
+  y: 100,
+  width: 80,
+  height: 40,
+  draw() {
+    ctx.font = "24px serif";
+    ctx.fillText(`score : ${score}`, this.x, this.y);
   },
 };
 
@@ -70,22 +86,23 @@ let land = {
 function frameAnimation() {
   animation = requestAnimationFrame(frameAnimation);
   timer++;
+  score++;
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  if (timer % 90 === 0) {
+  if (timer % 288 === 0) {
     var pigeon = new Pigeon();
     pigeonList.push(pigeon);
   }
 
   pigeonList.forEach((v, i, a) => {
-    if (v.x < 0) {
+    if (v.x < -70) {
       a.splice(i, 1);
     }
 
     collideChecker(INE, v);
 
-    v.x -= 5;
+    v.x -= pigeonSpeed;
     v.draw();
   });
 
@@ -94,13 +111,14 @@ function frameAnimation() {
     INE.y -= gravitySpeed;
     jumpTimer++;
   }
-  if (INE.y >= 300) {
+  if (INE.y >= Land_Y - INE.height) {
     isJumping = false;
     gravitySpeed = 0;
   }
 
   INE.draw();
   land.draw();
+  scoreText.draw();
 }
 
 frameAnimation();
@@ -108,11 +126,19 @@ frameAnimation();
 //sub function
 
 function collideChecker(I, P) {
-  const x_diff = P.x - (I.x + I.width);
-  const y_diff = P.y - (I.y + I.height);
-  if (x_diff < 0 && y_diff < 0) {
+  const I_Rx = I.x + I.width;
+  const I_By = I.y + I.height;
+  const P_Rx = P.x + P.width;
+  const P_By = P.y + P.height;
+
+  if (
+    (I_Rx >= P.x && I.x <= P.x && I_By >= P.y && I.y <= P.y) ||
+    (I_Rx >= P_Rx && I.x <= P_Rx && I_By >= P.y && I.y <= P.y) ||
+    (I_Rx >= P.x && I.x <= P.x && I_By >= P_By && I.y <= P_By) ||
+    (I_Rx >= P_Rx && I.x <= P_Rx && I_By >= P_By && I.y <= P_By)
+  ) {
     console.log(I, P);
-    console.log(x_diff, y_diff);
+
     gameProcess = false;
     // alert("gg");
     cancelAnimationFrame(animation);
@@ -123,7 +149,16 @@ function collideChecker(I, P) {
 
 document.addEventListener("keydown", function (e) {
   if (e.code === "Space") {
-    isJumping = true;
-    gravitySpeed = 10;
+    if (!gameProcess) {
+      score = 0;
+      gameProcess = true;
+      pigeonList = [];
+      frameAnimation();
+    }
+
+    if (!isJumping) {
+      isJumping = true;
+      gravitySpeed = 14;
+    }
   }
 });
